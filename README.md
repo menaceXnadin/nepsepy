@@ -1,19 +1,22 @@
-# nepse-public-client
+# nepsepy
 
-Unofficial Python client for the **public** market-data endpoints of the
-Nepal Stock Exchange (https://nepalstock.com.np) — today's prices, floor
-sheets, market depth, indices and charts, company filings, sector
-summaries, brokers, notices, and more. It performs the same login-less
-handshake the site's own frontend does; no credentials, no scraping of
-private pages.
+`nepsepy` is an unofficial Python client for publicly available Nepal Stock
+Exchange (NEPSE) market data. It provides a small, synchronous API for market
+status, prices, floor sheets, indices, company information, notices, and other
+data used by the NEPSE website.
 
-## Install
+It is not affiliated with the Nepal Stock Exchange.
+
+## Installation
+
+Requires Python 3.10 or later.
 
 ```bash
-pip install nepse-public-client
+python -m pip install nepsepy
 ```
 
-Requires Python 3.10+ and `httpx` + `wasmtime` (installed automatically).
+The PyPI distribution is named `nepsepy`; the Python import package is
+`nepse_client`.
 
 ## Quick start
 
@@ -21,61 +24,77 @@ Requires Python 3.10+ and `httpx` + `wasmtime` (installed automatically).
 from nepse_client import NepseClient
 
 with NepseClient() as client:
-    print(client.market_status())
-    print(client.top_gainers())
-    print(client.today_price(page=1, size=20))
-    sheet = client.floorsheets(stock_id=686)   # BARUN
-    print(sheet.get("totalTrades"), sheet.get("totalAmount"))
+    status = client.market_status()
+    gainers = client.top_gainers()
+    prices = client.today_price(page=1, size=20)
+
+    print(status["isOpen"])
+    print(gainers[:3])
+    print(prices["content"][:3])
 ```
 
-Every client bootstraps its own session on first use; tokens live in
-memory only and are never logged. Requests are paced conservatively and
-`429`/`Retry-After` responses are honored.
+Most methods return the JSON object or list supplied by NEPSE. Pagination uses
+1-based page numbers, matching the website UI. Dates use `yyyy-MM-dd`.
 
-## What you can do
+## Features
 
-- **Market** — status, summary, live snapshot, ticker, top gainers /
-  losers / turnover / traded shares / transactions / most active.
-- **Prices & trades** — today-price table (14 sort columns), floor sheet
-  with stock/broker/contract filters, market depth + odd lots,
-  supply/demand, trading history, trading averages, market-cap history.
-- **Indices & charts** — NEPSE/sub-indices, datewise history, intraday
-  and range charts, per-company OHLC graphs.
-- **Companies** — info, profile, price history, board, corporate actions,
-  financials, AGM, dividends, news/filings with document attachments.
-  Pass security ids (resolve symbols via `companies()`).
-- **Directories** — sectors, share groups, classification, promoters,
-  debentures/bonds, company lists, margin companies, brokers.
-- **News & files** — notices, disclosures, company news feed, reports,
-  events, holidays, file downloads, trading CSV export, captcha.
+- Market status, summaries, live market data, ticker, and top-ten lists.
+- Today’s prices, floor sheets, market depth, supply/demand, and trade history.
+- NEPSE indices, index history, and market/company chart data.
+- Security profiles, company information, corporate actions, financial reports,
+  dividends, AGMs, and company news.
+- Listed-company, sector, share-group, promoter, broker, and dealer directories.
+- Notices, disclosures, holidays, reports, events, CSV exports, and file
+  downloads.
+
+## Authentication and rate limits
+
+No account credentials are required. `NepseClient` performs the same public
+session bootstrap used by NEPSE’s frontend when it is first needed. Session
+tokens stay in memory and are redacted from package diagnostics.
+
+Requests are paced conservatively. A `429 Too Many Requests` response raises
+`RateLimitedError`; the client does not retry in a loop.
+
+## Common examples
 
 ```python
+from nepse_client import NepseClient
+
 with NepseClient() as client:
-    news = client.security_company_news(686)
-    print(news[0]["companyNews"]["newsHeadline"])
-    prof = client.security_profile(686)
-    print(prof["logoFilePath"])
+    # Use numeric security IDs; resolve them from companies() or securities().
+    companies = client.companies()
+    barun = next(row for row in companies if row["symbol"] == "BARUN")
+
+    profile = client.security_profile(barun["id"])
+    floorsheet = client.floorsheets(stock_id=barun["id"])
+
+    print(profile)
+    print(floorsheet["totalTrades"])
 ```
 
-Pages are 1-based (like the site); dates are `yyyy-MM-dd`. A few NEPSE
-backends are broken server-side (their own site fails too) — those
-methods raise with a note in the docstring.
-
 ## Interactive explorer
+
+The repository includes a terminal explorer for local use:
 
 ```bash
 python tui.py
 ```
 
-Browse everything from the terminal — no token material is ever printed.
+## Development
 
-## Scope & disclaimer
+```bash
+python -m pip install -e ".[dev]"
+pytest -q
+```
 
-This is an unofficial, read-only client for publicly accessible data.
-It does not touch login, admin/CMS, or any state-changing endpoints. Not
-affiliated with the Nepal Stock Exchange. Data is delayed per exchange
-rules; verify before trading.
+## Scope and disclaimer
+
+This package is for public, read-only market-data workflows. It does not handle
+user login, trading, portfolio actions, or other state-changing operations.
+NEPSE data may be delayed or corrected by the exchange; verify information
+independently before making financial decisions.
 
 ## License
 
-MIT — see `LICENSE`.
+Distributed under the [MIT License](LICENSE).

@@ -4,12 +4,14 @@ HTTP paths). Run: python3 gen_api_docs.py (then delete or keep in tools)."""
 import ast
 from pathlib import Path
 
-SRC = Path(__file__).parent / "nepse_client" / "client.py"
+SRCS = [Path(__file__).parent / "nepse_client" / f for f in
+        ("client.py", "_market.py", "_securities.py", "_prices.py",
+         "_company.py", "_news.py")]
 OUT = Path(__file__).parent / "docs" / "API.md"
 
-HEADER = """# NEPSE Public Client — API Reference
+HEADER = """# nepsepy API Reference
 
-> Generated from `nepse_client/client.py` (signatures, docstrings, request
+> Generated from `nepse_client/` (signatures, docstrings, request
 > paths) — regenerate with `python3 gen_api_docs.py`. Discovery provenance
 > (which site page fires what) lives in
 > [`nepse-api-catalog.md`](./nepse-api-catalog.md). Browse interactively
@@ -55,24 +57,8 @@ against the genuine site, not just this client):
 
 """
 
-tree = ast.parse(SRC.read_text())
-lines = SRC.read_text().splitlines()
-
-# map line number -> preceding section comment ("# -- ... --")
-sections: list[tuple[int, str]] = []
-for i, ln in enumerate(lines):
-    s = ln.strip()
-    if s.startswith("# --"):
-        title = s.strip("# ").strip("- ")
-        sections.append((i + 1, title))
-
-
-def section_for(lineno: int) -> str:
-    cur = "Session & low-level"
-    for start, name in sections:
-        if start < lineno:
-            cur = name
-    return cur
+trees_lines = [(ast.parse(p.read_text()), p.read_text().splitlines())
+               for p in SRCS]
 
 
 def _is_get(src: str) -> bool:
@@ -80,54 +66,68 @@ def _is_get(src: str) -> bool:
 
 
 entries: list[tuple[str, int, str, str, str, list[str], str]] = []
-for node in ast.walk(tree):
-    if not isinstance(node, ast.FunctionDef):
-        continue
-    if node.name.startswith("_") or node.name in (
-            "bootstrap", "close", "get", "post", "get_json", "post_json",
-            "describe_state"):
-        continue
-    # full signature: source lines until parentheses balance
-    import re as _re
+for tree, lines in trees_lines:
+    file_sections: list[tuple[int, str]] = []
+    for i, ln in enumerate(lines):
+        s = ln.strip()
+        if s.startswith("# --"):
+            file_sections.append((i + 1, s.strip("# ").strip("- ")))
 
-    sig_lines = []
-    depth = 0
-    started = False
-    for ln in lines[node.lineno - 1: node.end_lineno]:
-        sig_lines.append(ln.strip())
-        depth += ln.count("(") - ln.count(")")
-        if "(" in ln:
-            started = True
-        if started and depth <= 0:
-            break
-    sig = " ".join(sig_lines)
-    doc = (ast.get_docstring(node) or "").strip()
-    # request paths (incl. f-string templates) + verbs + signed variant
-    # (code only — docstring mentions would duplicate the paths)
-    code_from = node.lineno
-    if (node.body and isinstance(node.body[0], ast.Expr)
-            and isinstance(node.body[0].value, ast.Constant)
-            and isinstance(node.body[0].value.value, str)):
-        code_from = node.body[0].end_lineno + 1
-    body_src = "\n".join(lines[code_from - 1: node.end_lineno])
-    paths = []
-    for m in _re.finditer(r"(/api/[\w\-/.?=&{}]+)", body_src):
-        p = m.group(1).rstrip("?&")
-        base = p.split("?")[0]
-        if base not in paths:
-            paths.append(base)
-    src = body_src
-    verbs = []
-    if "post_json" in src or "self.post(" in src:
-        verbs.append("POST")
-    if "get_json" in src or _is_get(src):
-        verbs.append("GET")
-    signed = ""
-    m = _re.search(r'_signed\("(\w+)"\)', src)
-    if m:
-        signed = m.group(1)
-    how = ", ".join(verbs) + (f" (signed POST body variant {signed})" if signed else "")
-    entries.append((section_for(node.lineno), node.lineno, node.name, sig, doc, paths, how))
+    def section_for(lineno: int) -> str:
+        cur = "Session & low-level"
+        for start, name in file_sections:
+            if start < lineno:
+                cur = name
+        return cur
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.FunctionDef):
+            continue
+        if node.name.startswith("_") or node.name in (
+                "bootstrap", "close", "get", "post", "get_json", "post_json",
+                "describe_state"):
+            continue
+        # full signature: source lines until parentheses balance
+        import re as _re
+
+        sig_lines = []
+        depth = 0
+        started = False
+        for ln in lines[node.lineno - 1: node.end_lineno]:
+            sig_lines.append(ln.strip())
+            depth += ln.count("(") - ln.count(")")
+            if "(" in ln:
+                started = True
+            if started and depth <= 0:
+                break
+        sig = " ".join(sig_lines)
+        doc = (ast.get_docstring(node) or "").strip()
+        # request paths (incl. f-string templates) + verbs + signed variant
+        # (code only — docstring mentions would duplicate the paths)
+        code_from = node.lineno
+        if (node.body and isinstance(node.body[0], ast.Expr)
+                and isinstance(node.body[0].value, ast.Constant)
+                and isinstance(node.body[0].value.value, str)):
+            code_from = node.body[0].end_lineno + 1
+        body_src = "\n".join(lines[code_from - 1: node.end_lineno])
+        paths = []
+        for m in _re.finditer(r"(/api/[\w\-/.?=&{}]+)", body_src):
+            p = m.group(1).rstrip("?&")
+            base = p.split("?")[0]
+            if base not in paths:
+                paths.append(base)
+        src = body_src
+        verbs = []
+        if "post_json" in src or "self.post(" in src:
+            verbs.append("POST")
+        if "get_json" in src or _is_get(src):
+            verbs.append("GET")
+        signed = ""
+        m = _re.search(r'_signed\("(\w+)"\)', src)
+        if m:
+            signed = m.group(1)
+        how = ", ".join(verbs) + (f" (signed POST body variant {signed})" if signed else "")
+        entries.append((section_for(node.lineno), node.lineno, node.name, sig, doc, paths, how))
 
 
 entries.sort(key=lambda e: (e[0], e[1]))

@@ -4,7 +4,12 @@ __pycache__/
 .pytest_cache/
 .venv/
 *.egg-info/
+build/
+dist/
+.coverage
+htmlcov/
 docs/
+AGENTS.md
 *.jpg
 *.jpeg
 *.png
