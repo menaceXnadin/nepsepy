@@ -1,9 +1,11 @@
 """Unit tests. Fake tokens/indexes only — no live credentials anywhere."""
 
+import asyncio
+
 import httpx
 import pytest
 
-from nepsepy import NepseClient
+from nepsepy import AsyncNepseClient, NepseClient
 from nepsepy.auth import ProveResponse, TokenState
 from nepsepy.exceptions import (AuthExpiredError, BootstrapError,
                                 PublicEndpointError, RateLimitedError)
@@ -43,6 +45,42 @@ def make_client(handler, **kw):
     client = NepseClient(transport=httpx.MockTransport(handler), **kw)
     client._cleaner = FakeCleaner()  # never touch real wasm in unit tests
     return client
+
+
+# -- async client ----------------------------------------------------------
+
+def test_async_client_awaits_endpoint_methods():
+    calls = {"prove": 0, "data": 0}
+
+    def handler(request):
+        if request.url.path == "/api/authenticate/prove":
+            calls["prove"] += 1
+            return httpx.Response(200, json=fake_prove())
+        calls["data"] += 1
+        return httpx.Response(200, json={"isOpen": "CLOSE"})
+
+    async def run():
+        async with AsyncNepseClient(
+                transport=httpx.MockTransport(handler), min_interval=0) as client:
+            client._client._cleaner = FakeCleaner()
+            return await client.market_status()
+
+    assert asyncio.run(run()) == {"isOpen": "CLOSE"}
+    assert calls == {"prove": 1, "data": 1}
+
+
+def test_async_client_refreshes_once():
+    calls = {"prove": 0, "refresh": 0, "data": 0}
+
+    async def run():
+        async with AsyncNepseClient(
+                transport=httpx.MockTransport(_refresh_handler(calls, [401, 200])),
+                min_interval=0) as client:
+            client._client._cleaner = FakeCleaner()
+            return await client.market_summary()
+
+    assert asyncio.run(run()) == []
+    assert calls == {"prove": 1, "refresh": 1, "data": 2}
 
 
 # -- transformation -------------------------------------------------------

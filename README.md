@@ -9,7 +9,7 @@
 
 > A clean Python interface for public Nepal Stock Exchange (NEPSE) market data.
 
-`nepsepy` provides a small, synchronous API for market status, prices, floor
+`nepsepy` provides synchronous and async APIs for market status, prices, floor
 sheets, indices, company information, notices, and other data used by the
 NEPSE website.
 
@@ -51,6 +51,21 @@ with NepseClient() as client:
 
 Most methods return the JSON object or list supplied by NEPSE. Pagination uses
 1-based page numbers, matching the website UI. Dates use `yyyy-MM-dd`.
+
+## Async use
+
+For async applications such as FastAPI, use `AsyncNepseClient`. It has the
+same endpoint methods and automatically manages the temporary NEPSE token.
+
+```python
+from nepsepy import AsyncNepseClient
+
+async def load_market():
+    async with AsyncNepseClient() as client:
+        status = await client.market_status()
+        gainers = await client.top_gainers()
+        return status, gainers
+```
 
 ## Features
 
