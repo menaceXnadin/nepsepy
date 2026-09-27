@@ -1,0 +1,3 @@
+httpx>=0.27
+wasmtime>=12
+pytest>=8
