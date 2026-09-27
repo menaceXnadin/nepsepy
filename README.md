@@ -1,11 +1,28 @@
 # nepsepy
 
-`nepsepy` is an unofficial Python client for publicly available Nepal Stock
-Exchange (NEPSE) market data. It provides a small, synchronous API for market
-status, prices, floor sheets, indices, company information, notices, and other
-data used by the NEPSE website.
+![nepsepy banner](https://res.cloudinary.com/dzbc5mlm9/image/upload/v1790524377/nepsepybanner_ucetgq.png)
+
+[![PyPI](https://img.shields.io/pypi/v/nepsepy?logo=pypi&logoColor=white)](https://pypi.org/project/nepsepy/)
+[![Python](https://img.shields.io/pypi/pyversions/nepsepy?logo=python&logoColor=white)](https://pypi.org/project/nepsepy/)
+[![Tests](https://github.com/menaceXnadin/nepsepy/actions/workflows/tests.yml/badge.svg)](https://github.com/menaceXnadin/nepsepy/actions/workflows/tests.yml)
+[![License](https://img.shields.io/badge/license-MIT-0b7f52)](LICENSE)
+
+> A clean Python interface for public Nepal Stock Exchange (NEPSE) market data.
+
+`nepsepy` provides a small, synchronous API for market status, prices, floor
+sheets, indices, company information, notices, and other data used by the
+NEPSE website.
 
 It is not affiliated with the Nepal Stock Exchange.
+
+## Why nepsepy?
+
+- **Simple API** — use named methods such as `today_price()` and
+  `security_profile()` instead of manually assembling HTTP requests.
+- **Public session handling** — performs the same login-free bootstrap used by
+  the NEPSE frontend; no user credentials are needed.
+- **Careful by default** — requests are paced, token values are kept in memory,
+  and rate limiting is surfaced clearly instead of retried aggressively.
 
 ## Installation
 
@@ -37,14 +54,14 @@ Most methods return the JSON object or list supplied by NEPSE. Pagination uses
 
 ## Features
 
-- Market status, summaries, live market data, ticker, and top-ten lists.
-- Today’s prices, floor sheets, market depth, supply/demand, and trade history.
-- NEPSE indices, index history, and market/company chart data.
-- Security profiles, company information, corporate actions, financial reports,
-  dividends, AGMs, and company news.
-- Listed-company, sector, share-group, promoter, broker, and dealer directories.
-- Notices, disclosures, holidays, reports, events, CSV exports, and file
-  downloads.
+| Area | Included data |
+| --- | --- |
+| Market | Status, summaries, live market data, ticker, and top-ten lists |
+| Prices & trades | Today’s prices, floor sheets, depth, supply/demand, and trade history |
+| Charts | NEPSE indices, index history, and market/company chart data |
+| Companies | Profiles, corporate actions, financial reports, dividends, AGMs, and news |
+| Directories | Companies, sectors, share groups, promoters, brokers, and dealers |
+| News & files | Notices, disclosures, holidays, reports, events, CSV exports, and downloads |
 
 ## Authentication and rate limits
 
