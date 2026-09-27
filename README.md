@@ -1,88 +1,81 @@
 # nepse-public-client
 
-Small Python client for the **public** market-data flow of
-https://nepalstock.com.np, mirroring exactly what the site's own Angular
-frontend does. Scope is deliberately narrow:
-
-- Public endpoints only (`/api/nots/*`, `/api/web/*`, `/api/margin/*`,
-  plus the internal bootstrap/refresh/wasm URLs the frontend itself uses).
-- No admin/CMS calls, no JWE decryption, no forgery. No credential or
-  state-changing endpoints (login, password flows, feedback/mail POSTs).
-- Tokens live in memory only and are never logged.
-- Conservative pacing (~2-3 req/s max) + `429`/`Retry-After` honoring.
-- On rejection, fail (or do the single normal refresh) — never bypass.
-
-## How the bootstrap works
-
-1. `GET /api/authenticate/prove` (no auth) returns raw `accessToken` /
-   `refreshToken` plus `salt1..salt5`. The raw tokens contain 5 decoy chars.
-2. `GET /assets/prod/css.wasm` provides `cdx/rdx/bdx/ndx/mdx`, which map the
-   salts to 5 cut positions. Access order: `cdx(s1..s5)`,
-   `rdx/bdx/ndx/mdx(s1,s2,s4,s3,s5)`. Refresh order: `cdx(s2,s1,s3,s5,s4)`,
-   `rdx(s2,s1,s3,s4,s5)`, `bdx/ndx/mdx(s2,s1,s4,s3,s5)` — taken from the
-   shipped frontend, never guessed.
-3. The client deletes one char at each position (JS `slice()` equivalent),
-   stores the cleaned pair in memory, and sends
-   `Authorization: Salter <cleaned-access-token>`.
-4. On a single 401 it does the frontend's normal
-   `POST /api/authenticate/refresh-token {refreshToken}` + transform + one
-   retry. A second 401 raises `AuthExpiredError`.
+Unofficial Python client for the **public** market-data endpoints of the
+Nepal Stock Exchange (https://nepalstock.com.np) — today's prices, floor
+sheets, market depth, indices and charts, company filings, sector
+summaries, brokers, notices, and more. It performs the same login-less
+handshake the site's own frontend does; no credentials, no scraping of
+private pages.
 
 ## Install
 
 ```bash
-pip install -r requirements.txt
+pip install nepse-public-client
 ```
 
-## Example
+Requires Python 3.10+ and `httpx` + `wasmtime` (installed automatically).
 
-```bash
-python example.py
+## Quick start
+
+```python
+from nepse_client import NepseClient
+
+with NepseClient() as client:
+    print(client.market_status())
+    print(client.top_gainers())
+    print(client.today_price(page=1, size=20))
+    sheet = client.floorsheets(stock_id=686)   # BARUN
+    print(sheet.get("totalTrades"), sheet.get("totalAmount"))
 ```
 
-## Terminal UI
+Every client bootstraps its own session on first use; tokens live in
+memory only and are never logged. Requests are paced conservatively and
+`429`/`Retry-After` responses are honored.
 
-Browse every discovered endpoint interactively (market, top tens,
-today-price with all 14 sort columns, floorsheet with filters, depth,
-indices/charts, company tabs incl. book-close, company lists, share
-groups, sector/classification/promoter/margin/debenture directories,
-reports, events, about/contact, file downloads, CSV export, captcha):
+## What you can do
+
+- **Market** — status, summary, live snapshot, ticker, top gainers /
+  losers / turnover / traded shares / transactions / most active.
+- **Prices & trades** — today-price table (14 sort columns), floor sheet
+  with stock/broker/contract filters, market depth + odd lots,
+  supply/demand, trading history, trading averages, market-cap history.
+- **Indices & charts** — NEPSE/sub-indices, datewise history, intraday
+  and range charts, per-company OHLC graphs.
+- **Companies** — info, profile, price history, board, corporate actions,
+  financials, AGM, dividends, news/filings with document attachments.
+  Pass security ids (resolve symbols via `companies()`).
+- **Directories** — sectors, share groups, classification, promoters,
+  debentures/bonds, company lists, margin companies, brokers.
+- **News & files** — notices, disclosures, company news feed, reports,
+  events, holidays, file downloads, trading CSV export, captcha.
+
+```python
+with NepseClient() as client:
+    news = client.security_company_news(686)
+    print(news[0]["companyNews"]["newsHeadline"])
+    prof = client.security_profile(686)
+    print(prof["logoFilePath"])
+```
+
+Pages are 1-based (like the site); dates are `yyyy-MM-dd`. A few NEPSE
+backends are broken server-side (their own site fails too) — those
+methods raise with a note in the docstring.
+
+## Interactive explorer
 
 ```bash
 python tui.py
 ```
 
-Symbols are accepted anywhere an id is needed (resolved via the site's own
-company list). Token material is never printed.
+Browse everything from the terminal — no token material is ever printed.
 
-```python
-with NepseClient() as client:
-    data = client.get("/api/nots/securityDailyTradeStat/58")
-    gainers = client.top_gainers(full=True)
-    table = client.today_price(page=2, size=20)
-    sheet = client.floorsheets(contract_no=2026092405016843)
-    depth = client.market_depth(2790)
-    history = client.security_price_history(2790)
-    chart = client.index_range(58, "2026-09-20", "2026-09-27")
-```
+## Scope & disclaimer
 
-Named methods cover the homepage, Today's Price, Floor Sheet, Market Depth,
-Indices/Charts, company detail tabs, top tens, sector/marcap/average
-summaries, trading history, notices and disclosures, directories
-(sectors, classification, promoters, debentures), reports, events,
-margin trades, about-us CMS, captcha steps, and file downloads.
+This is an unofficial, read-only client for publicly accessible data.
+It does not touch login, admin/CMS, or any state-changing endpoints. Not
+affiliated with the Nepal Stock Exchange. Data is delayed per exchange
+rules; verify before trading.
 
-## Signed POST bodies
+## License
 
-Some POSTs take `{"id": <checksum>}` computed from public values
-(`market-open` id, day of month, prove salts, and a 100-entry table from the
-shipped frontend) — see `nepse_client/checksum.py` and the catalog doc.
-The server validates the value; wrong ones are rejected.
-
-## Tests
-
-```bash
-pytest -q
-```
-
-Tests use fake tokens/indexes only — no live credentials anywhere.
+MIT — see `LICENSE`.
