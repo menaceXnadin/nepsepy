@@ -72,13 +72,6 @@ summaries, trading history, notices and disclosures, directories
 (sectors, classification, promoters, debentures), reports, events,
 margin trades, about-us CMS, captcha steps, and file downloads.
 
-- Full method reference: `docs/API.md` (81 methods; regenerate with
-  `python3 gen_api_docs.py`).
-- Discovery provenance (which site page fires what, DevTools-verified):
-  `docs/nepse-api-catalog.md`.
-- Methodology (how the auth, checksums, and endpoints were reverse
-  engineered — reusable on similar sites): `docs/METHOD.md`.
-
 ## Signed POST bodies
 
 Some POSTs take `{"id": <checksum>}` computed from public values
