@@ -1,17 +1,17 @@
-"""Generate docs/API.md from nepse_client/client.py (signatures, docstrings,
+"""Generate docs/API.md from nepsepy/client.py (signatures, docstrings,
 HTTP paths). Run: python3 gen_api_docs.py (then delete or keep in tools)."""
 
 import ast
 from pathlib import Path
 
-SRCS = [Path(__file__).parent / "nepse_client" / f for f in
+SRCS = [Path(__file__).parent / "nepsepy" / f for f in
         ("client.py", "_market.py", "_securities.py", "_prices.py",
          "_company.py", "_news.py")]
 OUT = Path(__file__).parent / "docs" / "API.md"
 
 HEADER = """# nepsepy API Reference
 
-> Generated from `nepse_client/` (signatures, docstrings, request
+> Generated from `nepsepy/` (signatures, docstrings, request
 > paths) — regenerate with `python3 gen_api_docs.py`. Discovery provenance
 > (which site page fires what) lives in
 > [`nepse-api-catalog.md`](./nepse-api-catalog.md). Browse interactively

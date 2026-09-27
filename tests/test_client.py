@@ -3,11 +3,11 @@
 import httpx
 import pytest
 
-from nepse_client import NepseClient
-from nepse_client.auth import ProveResponse, TokenState
-from nepse_client.exceptions import (AuthExpiredError, BootstrapError,
-                                      PublicEndpointError, RateLimitedError)
-from nepse_client.wasm import strip_at_indexes
+from nepsepy import NepseClient
+from nepsepy.auth import ProveResponse, TokenState
+from nepsepy.exceptions import (AuthExpiredError, BootstrapError,
+                                PublicEndpointError, RateLimitedError)
+from nepsepy.wasm import strip_at_indexes
 
 FAKE_ACCESS = "ACCESS-0123456789-fake-token-abcdef"
 FAKE_REFRESH = "REFRESH-9876543210-fake-token-ghijkl"
@@ -215,8 +215,8 @@ def test_prove_429_surfaced():
 # -- checksums (pure math, fake salts) -----------------------------------------
 
 def test_checksum_base_and_variants():
-    from nepse_client import checksum_a, checksum_b, checksum_c
-    from nepse_client.checksum import base, sign
+    from nepsepy import checksum_a, checksum_b, checksum_c
+    from nepsepy.checksum import base, sign
     # locks the DUMMY row the live site used on 2026-09-27 (market id 80)
     assert base(80, 27) == 291
     salts = (11, 22, 33, 44, 55)
@@ -235,7 +235,7 @@ def test_checksum_base_and_variants():
 # -- signed POST wiring (MockTransport, fake salts) ------------------------------
 
 def _signed_client(monkeypatch, seen):
-    import nepse_client.client as client_mod
+    import nepsepy.client as client_mod
 
     monkeypatch.setattr(client_mod, "_ck_day", lambda: 27)
 
@@ -294,7 +294,7 @@ def test_security_floorsheet_mirrors_site_tab_request(monkeypatch):
 
 
 def test_ui_page_numbers_map_to_zero_based(monkeypatch):
-    import nepse_client.client as client_mod
+    import nepsepy.client as client_mod
 
     monkeypatch.setattr(client_mod, "_ck_day", lambda: 27)
     seen = {"gets": [], "posts": []}
@@ -333,7 +333,7 @@ def test_ui_page_numbers_map_to_zero_based(monkeypatch):
 
 
 def test_post_401_refreshes_only_once(monkeypatch):
-    import nepse_client.client as client_mod
+    import nepsepy.client as client_mod
 
     monkeypatch.setattr(client_mod, "_ck_day", lambda: 27)
     calls = {"prove": 0, "refresh": 0, "post": 0}
@@ -395,7 +395,7 @@ def test_brokers_list_search_and_dealers():
 
 
 def test_sort_and_filter_query_passthrough(monkeypatch):
-    import nepse_client.client as client_mod
+    import nepsepy.client as client_mod
 
     monkeypatch.setattr(client_mod, "_ck_day", lambda: 27)
     seen = []
@@ -552,7 +552,7 @@ def test_fourth_pass_excluded_endpoints_hit_expected_paths():
 
 
 def test_binary_downloads_return_bytes(monkeypatch):
-    import nepse_client.client as client_mod
+    import nepsepy.client as client_mod
 
     monkeypatch.setattr(client_mod, "_ck_day", lambda: 27)
     seen = []

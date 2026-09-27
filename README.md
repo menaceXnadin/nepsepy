@@ -15,13 +15,12 @@ Requires Python 3.10 or later.
 python -m pip install nepsepy
 ```
 
-The PyPI distribution is named `nepsepy`; the Python import package is
-`nepse_client`.
+The PyPI distribution and Python import package are both named `nepsepy`.
 
 ## Quick start
 
 ```python
-from nepse_client import NepseClient
+from nepsepy import NepseClient
 
 with NepseClient() as client:
     status = client.market_status()
@@ -59,7 +58,7 @@ Requests are paced conservatively. A `429 Too Many Requests` response raises
 ## Common examples
 
 ```python
-from nepse_client import NepseClient
+from nepsepy import NepseClient
 
 with NepseClient() as client:
     # Use numeric security IDs; resolve them from companies() or securities().

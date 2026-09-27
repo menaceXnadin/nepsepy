@@ -9,7 +9,7 @@ from __future__ import annotations
 import sys
 from datetime import date, timedelta
 
-from nepse_client import NepseClient
+from nepsepy import NepseClient
 
 TODAY = date.today().isoformat()
 DISPLAY_ROWS = 15

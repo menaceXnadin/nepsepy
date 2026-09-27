@@ -4,7 +4,7 @@ Only calls endpoints the public website itself calls. Prints data summaries;
 never prints token material.
 """
 
-from nepse_client import NepseClient
+from nepsepy import NepseClient
 
 PATH = "/api/nots/securityDailyTradeStat/58"
 
