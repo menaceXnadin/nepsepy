@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nepsepy"
-version = "1.0.1"
+version = "1.0.2"
 description = "Unofficial Python client for public Nepal Stock Exchange market data"
 readme = "README.md"
 requires-python = ">=3.10"
