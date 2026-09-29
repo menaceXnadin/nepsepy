@@ -10,10 +10,12 @@ Clients
 .. autoclass:: nepsepy.NepseClient
    :members:
    :undoc-members:
+   :inherited-members:
 
 .. autoclass:: nepsepy.AsyncNepseClient
    :members:
    :undoc-members:
+   :inherited-members:
 
 Exceptions
 ----------
