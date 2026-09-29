@@ -8,7 +8,10 @@ build/
 dist/
 .coverage
 htmlcov/
-docs/
+docs/_build/
+# Internal research notes, not part of the published docs.
+docs/METHOD.md
+docs/nepse-api-catalog.md
 AGENTS.md
 *.jpg
 *.jpeg

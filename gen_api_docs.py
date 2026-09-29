@@ -13,8 +13,8 @@ HEADER = """# nepsepy API Reference
 
 > Generated from `nepsepy/` (signatures, docstrings, request
 > paths) — regenerate with `python3 gen_api_docs.py`. Discovery provenance
-> (which site page fires what) lives in
-> [`nepse-api-catalog.md`](./nepse-api-catalog.md). Browse interactively
+> (which site page fires what) lives in `nepse-api-catalog.md`
+> (internal repo note, not published). Browse interactively
 > with `python tui.py`.
 
 Base URL: `https://nepalstock.com.np` (override via `NepseClient(base_url=…)`).
