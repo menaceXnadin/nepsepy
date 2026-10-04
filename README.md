@@ -4,6 +4,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/nepsepy.svg?logo=pypi&logoColor=white)](https://pypi.org/project/nepsepy/)
 [![Python](https://img.shields.io/pypi/pyversions/nepsepy.svg?logo=python&logoColor=white)](https://pypi.org/project/nepsepy/)
+[![PyPI Downloads](https://static.pepy.tech/personalized-badge/nepsepy?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/nepsepy)
 [![Docs](https://img.shields.io/readthedocs/nepsepy.svg?logo=readthedocs&logoColor=white)](https://nepsepy.readthedocs.io)
 [![Tests](https://github.com/menaceXnadin/nepsepy/actions/workflows/tests.yml/badge.svg)](https://github.com/menaceXnadin/nepsepy/actions/workflows/tests.yml)
 [![License](https://img.shields.io/badge/license-MIT-0b7f52)](LICENSE)
