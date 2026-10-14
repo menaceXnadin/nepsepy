@@ -69,6 +69,20 @@ def test_async_client_awaits_endpoint_methods():
     assert calls == {"prove": 1, "data": 1}
 
 
+def test_async_client_recovers_dead_session():
+    calls = {"prove": 0, "refresh": 0, "data": 0}
+
+    async def run():
+        async with AsyncNepseClient(
+                transport=httpx.MockTransport(_refresh_handler(calls, [401, 401, 200])),
+                min_interval=0) as client:
+            client._client._cleaner = FakeCleaner()
+            return await client.market_summary()
+
+    assert asyncio.run(run()) == []
+    assert calls == {"prove": 2, "refresh": 1, "data": 3}
+
+
 def test_async_client_refreshes_once():
     calls = {"prove": 0, "refresh": 0, "data": 0}
 
@@ -212,12 +226,46 @@ def test_401_refresh_then_retry_once():
     client.close()
 
 
-def test_double_401_raises_without_loop():
+def test_persistent_401_raises_without_loop():
+    # 401 -> refresh -> 401 -> one fresh session -> 401 -> give up (bounded, no loop)
     calls = {"prove": 0, "refresh": 0, "data": 0}
-    client = make_client(_refresh_handler(calls, [401, 401]))
+    client = make_client(_refresh_handler(calls, [401, 401, 401]))
     with pytest.raises(AuthExpiredError):
         client.get("/api/nots/market-summary/")
-    assert calls["refresh"] == 1 and calls["data"] == 2
+    assert calls == {"prove": 2, "refresh": 1, "data": 3}
+    client.close()
+
+
+def test_dead_session_recovers_with_a_fresh_bootstrap():
+    # The long-running failure seen in practice: refresh succeeds but NEPSE
+    # still rejects the session; a fresh bootstrap (like a new client) works.
+    calls = {"prove": 0, "refresh": 0, "data": 0}
+    client = make_client(_refresh_handler(calls, [401, 401, 200]))
+    resp = client.get("/api/nots/market-summary/")
+    assert resp.status_code == 200
+    assert calls == {"prove": 2, "refresh": 1, "data": 3}
+    # and the client keeps working on the new session
+    assert client.get("/api/nots/market-summary/").status_code == 200
+    client.close()
+
+
+def test_rejected_refresh_recovers_with_a_fresh_bootstrap():
+    calls = {"prove": 0, "refresh": 0, "data": 0}
+
+    def handler(request):
+        path = request.url.path
+        if path == "/api/authenticate/prove":
+            calls["prove"] += 1
+            return httpx.Response(200, json=fake_prove())
+        if path == "/api/authenticate/refresh-token":
+            calls["refresh"] += 1
+            return httpx.Response(401, json={})  # refresh token expired too
+        calls["data"] += 1
+        return httpx.Response(401 if calls["data"] == 1 else 200, json=[])
+
+    client = make_client(handler)
+    assert client.get("/api/nots/market-summary/").status_code == 200
+    assert calls == {"prove": 2, "refresh": 1, "data": 2}
     client.close()
 
 
@@ -367,6 +415,34 @@ def test_ui_page_numbers_map_to_zero_based(monkeypatch):
     nn = [q for p, q in gets if p == "/api/nots/news/notice/all"]
     assert nn[0] == "page=0"
     assert nn[1] == "page=1"
+    client.close()
+
+
+def test_signed_post_is_resigned_after_refresh(monkeypatch):
+    # A retried signed POST must carry an id computed from the NEW session's
+    # salts; reusing the pre-refresh body makes NEPSE answer with an empty body.
+    import json
+    import nepsepy.client as client_mod
+
+    monkeypatch.setattr(client_mod, "_ck_day", lambda: 27)
+    ids = []
+
+    def handler(request):
+        path = request.url.path
+        if path == "/api/authenticate/prove":
+            return httpx.Response(200, json=fake_prove())
+        if path == "/api/nots/nepse-data/market-open":
+            return httpx.Response(200, json={"id": 80})
+        if path == "/api/authenticate/refresh-token":
+            return httpx.Response(200, json=dict(fake_prove(), salt1=91, salt2=92, salt3=93,
+                                                 salt4=94, salt5=95))
+        ids.append(json.loads(request.content)["id"])
+        return httpx.Response(401 if len(ids) == 1 else 200, json={"content": []})
+
+    client = make_client(handler)
+    assert client.today_price() == {"content": []}
+    assert len(ids) == 2 and ids[0] != ids[1]
+    assert ids[1] == client._signed("b")  # matches the refreshed session's salts
     client.close()
 
 

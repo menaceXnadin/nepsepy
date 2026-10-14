@@ -102,14 +102,14 @@ class CompanyMixin:
     def company_info(self, security_id: int) -> dict:
         """Company header {securityDailyTradeDto, security, ...} (detail page)."""
         return self.post_json(f"/api/nots/security/{security_id}",  # type: ignore[return-value]
-                              {"id": self._signed("raw")})
+                              lambda: {"id": self._signed("raw")})
 
     def company_graph(self, security_id: int) -> list:
         """Company OHLC history [{businessDate, openPrice, ...}] (chart tab)."""
         return self.post_json(f"/api/nots/market/graphdata/{security_id}",  # type: ignore[return-value]
-                              {"id": self._signed("raw")})
+                              lambda: {"id": self._signed("raw")})
 
     def company_graph_intraday(self, security_id: int) -> list:
         """Company intraday LTP (Charts Company tab, 1D range)."""
         return self.post_json(f"/api/nots/market/graphdata/daily/{security_id}",  # type: ignore[return-value]
-                              {"id": self._signed("raw")})
+                              lambda: {"id": self._signed("raw")})

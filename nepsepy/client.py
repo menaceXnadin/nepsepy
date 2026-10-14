@@ -12,8 +12,10 @@ Scope guardrails:
     the normal website calls). Everything else raises PublicEndpointError.
   - No admin/CMS calls, no endpoint discovery, no token decryption.
   - Conservative rate limiting + 429 honoring, no evasion.
-  - On access rejection (401/403) fail or do the single normal refresh;
-    never probe further.
+  - On a 401 do the single normal refresh; if NEPSE still rejects the
+    session, start one fresh session (the same bootstrap a page reload
+    does) and retry once. Never more than one of each, never a loop;
+    403 fails immediately.
 """
 
 from __future__ import annotations
@@ -24,9 +26,11 @@ from ._market import MarketMixin
 from ._company import CompanyMixin
 
 import time
-from typing import Optional
+from typing import Callable, Optional, Union
 
 import httpx
+
+Body = Optional[Union[dict, Callable[[], dict]]]
 
 from .auth import ProveResponse, TokenState
 from .checksum import base as _ck_base
@@ -191,37 +195,54 @@ class NepseClient(MarketMixin, SecuritiesMixin, PricesMixin, CompanyMixin, NewsM
         return self._tokens
 
     # -- request plumbing ------------------------------------------------
-    def _send(self, method: str, path: str,
-              body: Optional[dict] = None) -> httpx.Response:
-        """Send an authed request with at most one 401->refresh retry."""
-        self._check_public_path(path)
-        if self._tokens is None:
-            self.bootstrap()
+    def _dispatch(self, method: str, path: str,
+                  body: "Body" = None) -> httpx.Response:
+        """One paced, authed request with the current tokens.
+
+        A callable ``body`` is evaluated here, per attempt, so a signed body
+        (``{"id": self._signed(...)}``) is recomputed with the salts of the
+        session actually used — a retry after a refresh or a fresh session
+        would otherwise send a signature for the old session.
+        """
         assert self._tokens is not None
         self._pace()
         if method == "GET":
             resp = self._http.get(path, headers=self._tokens.auth_header())
         else:
-            resp = self._http.post(path, json=body,
+            payload = body() if callable(body) else body
+            resp = self._http.post(path, json=payload,
                                    headers=self._tokens.auth_header())
         if resp.status_code == 429:
             self._fail_429(resp)
+        return resp
+
+    def _send(self, method: str, path: str,
+              body: "Body" = None) -> httpx.Response:
+        """Send an authed request, recovering from an expired session.
+
+        On 401: one normal refresh + retry (mirroring handle401v1). If the
+        refresh is rejected or the request is still 401, the session is dead
+        server-side and the refresh token cannot revive it, so start one fresh
+        session (bootstrap, as a page reload would) and retry once more.
+        Long-running clients otherwise stay stuck on dead tokens forever.
+        """
+        self._check_public_path(path)
+        if self._tokens is None:
+            self.bootstrap()
+        resp = self._dispatch(method, path, body)
         if resp.status_code == 401:
-            # Single normal refresh + retry, mirroring handle401v1.
-            self._refresh_once()
-            assert self._tokens is not None
-            self._pace()
-            if method == "GET":
-                resp = self._http.get(path,
-                                      headers=self._tokens.auth_header())
-            else:
-                resp = self._http.post(path, json=body,
-                                       headers=self._tokens.auth_header())
-            if resp.status_code == 429:
-                self._fail_429(resp)
-            if resp.status_code == 401:
-                raise AuthExpiredError(
-                    "request still unauthorized after refresh")
+            try:
+                self._refresh_once()
+                resp = self._dispatch(method, path, body)
+            except AuthExpiredError:
+                resp = None  # refresh rejected: fall through to a fresh session
+            if resp is None or resp.status_code == 401:
+                self._tokens = None
+                self.bootstrap()
+                resp = self._dispatch(method, path, body)
+                if resp.status_code == 401:
+                    raise AuthExpiredError(
+                        "request still unauthorized after refresh and a fresh session")
         if resp.status_code in (401, 403):
             raise AuthExpiredError(
                 f"access rejected with HTTP {resp.status_code}")
@@ -232,8 +253,12 @@ class NepseClient(MarketMixin, SecuritiesMixin, PricesMixin, CompanyMixin, NewsM
         """GET a public market-data path, with at most one 401->refresh retry."""
         return self._send("GET", path)
 
-    def post(self, path: str, body: Optional[dict] = None) -> httpx.Response:
-        """POST a public market-data path (same guards/retry as GET)."""
+    def post(self, path: str, body: "Body" = None) -> httpx.Response:
+        """POST a public market-data path (same guards/retry as GET).
+
+        ``body`` may be a dict or a zero-argument callable returning one; use a
+        callable for signed bodies so retries re-sign with the current session.
+        """
         return self._send("POST", path, body)
 
     def get_json(self, path: str) -> object:
@@ -241,7 +266,7 @@ class NepseClient(MarketMixin, SecuritiesMixin, PricesMixin, CompanyMixin, NewsM
         resp.raise_for_status()
         return resp.json()
 
-    def post_json(self, path: str, body: Optional[dict] = None) -> object:
+    def post_json(self, path: str, body: "Body" = None) -> object:
         resp = self.post(path, body)
         resp.raise_for_status()
         return resp.json()
