@@ -9,7 +9,7 @@ project = "nepsepy"
 author = "nepsepy contributors"
 copyright = "nepsepy contributors"
 release = "1.0.2"
-version = "1.0.2"
+version = "1.0.3"
 
 extensions = [
     "sphinx.ext.autodoc",
