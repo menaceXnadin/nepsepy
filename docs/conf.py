@@ -8,8 +8,8 @@ sys.path.insert(0, os.path.abspath(".."))
 project = "nepsepy"
 author = "nepsepy contributors"
 copyright = "nepsepy contributors"
-release = "1.0.3"
-version = "1.0.3"
+release = "1.0.4"
+version = "1.0.4"
 
 extensions = [
     "sphinx.ext.autodoc",
