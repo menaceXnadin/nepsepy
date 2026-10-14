@@ -135,12 +135,12 @@ def security_image(self, file_location: str) -> bytes:
 
 **Request:** GET `/api/nots/security/getImage`
 
-Security image envelope (logos, board portraits) â€” raw body.
+Security image envelope (logos, board portraits) — raw body.
 
 The response is JSON ``{"content": "<base64>"}``, NOT raw image
 bytes. To process: parse the JSON, take ``["content"]``, strip
 whitespace, pad to a multiple of 4 (``+= "=" * (-len(s) % 4)``),
-then base64-decode â€” you get JPEG/PNG bytes (magic ``ffd8ff``).
+then base64-decode — you get JPEG/PNG bytes (magic ``ffd8ff``).
 For web display the site's own bundle prefixes the string as
 ``"data:image/PNG;base64," + content`` straight into an <img>.
 ``fileLocation`` from e.g. ``security_profile()["logoFilePath"]``
@@ -155,7 +155,7 @@ def security_file(self, file_location: str) -> bytes:
 
 **Request:** GET `/api/nots/security/fetchFiles`
 
-Security file bytes (same fileLocation scheme) â€” raw bytes.
+Security file bytes (same fileLocation scheme) — raw bytes.
 
 Unlike security_image(), this one returns the file directly
 (verified: BARUN logo path yields ``image/jpeg`` + JFIF magic,
@@ -214,7 +214,7 @@ def live_market(self) -> list:
 Full live snapshot (356 rows: OHLC, volumes, per-security indexId).
 
 The Live Market *page* redirects to `/` while the market is closed,
-but the API itself answers 200 regardless â€” verified live.
+but the API itself answers 200 regardless — verified live.
 
 ### `nepse_indices`
 
@@ -561,12 +561,17 @@ All securities [{securityId, securityName, securitySymbol}].
 ### `companies`
 
 ```python
-def companies(self) -> list:
+def companies(self, include_delisted: bool = False) -> list:
 ```
 
 **Request:** GET `/api/nots/security`
 
-Non-delisted companies (selectors site-wide).
+Companies [{id, symbol, securityName, name, activeStatus}].
+
+Default: non-delisted only (the site-wide selector list). With
+``include_delisted=True`` the delisted, suspended and inactive
+securities are included too (``activeStatus`` A/D/S/I), which is
+what survivorship-free historical analysis needs.
 
 ### `companies_list`
 
@@ -635,7 +640,7 @@ def companies_non_promoter(self) -> list:
 Non-promoter securities [{id, symbol, securityName, ...}].
 
 Filter source on the Listed Securities / Margin Securities pages
-(``security?nonPromoter=true`` â€” 649 rows, flatter than companies()).
+(``security?nonPromoter=true`` — 649 rows, flatter than companies()).
 
 ### `share_groups`
 
@@ -645,7 +650,7 @@ def share_groups(self) -> list:
 
 **Request:** GET `/api/nots/security/shareGroup/`
 
-Share groups [{id, name}] â€” names A/Z/B/G drive classification().
+Share groups [{id, name}] — names A/Z/B/G drive classification().
 
 ### `classification`
 
@@ -656,7 +661,7 @@ def classification(self, page: int = 1, size: int = 20, share_group: Optional[st
 **Request:** GET `/api/nots/security/classification{query}`
 
 Company Classification page (Spring page; page 1-based like the UI;
-share_group is the A/Z/B/G letter â€” verified exhaustive: 31/107/108/34).
+share_group is the A/Z/B/G letter — verified exhaustive: 31/107/108/34).
 
 ### `promoters`
 
@@ -773,7 +778,7 @@ Mirrors the site's own tab request:
 ``business_date`` defaults to the market ``asOf`` day like the UI.
 
 NOTE: the server currently answers nginx ``403 Forbidden`` to this
-request â€” including requests made by the genuine site itself â€”
+request — including requests made by the genuine site itself —
 so this method exists for the day they fix it server-side. Until
 then it raises ``AuthExpiredError("access rejected with HTTP 403")``
 after the normal single refresh + retry. The checksum variant is
