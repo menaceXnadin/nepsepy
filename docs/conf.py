@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.abspath(".."))
 project = "nepsepy"
 author = "nepsepy contributors"
 copyright = "nepsepy contributors"
-release = "1.0.2"
+release = "1.0.3"
 version = "1.0.3"
 
 extensions = [
