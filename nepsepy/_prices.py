@@ -23,14 +23,14 @@ class PricesMixin:
             query = query.replace("?", f"?page={page - 1}", 1)
         return self.post_json(  # type: ignore[return-value]
             f"/api/nots/nepse-data/today-price{query}",
-            {"id": self._signed("b")})
+            lambda: {"id": self._signed("b")})
 
     def today_price_all(self, business_date: Optional[str] = None) -> list:
         """Full Today's Price list behind the CSV export."""
         path = "/api/nots/nepse-data/todays-price/"
         if business_date:
             path += f"?businessDate={business_date}"
-        return self.post_json(path, {"id": self._signed("b")})  # type: ignore[return-value]
+        return self.post_json(path, lambda: {"id": self._signed("b")})  # type: ignore[return-value]
 
     # -- signed POST: floorsheet -------------------------------------------------
     def floorsheets(self, page: int = 1, size: int = 20,
@@ -56,7 +56,7 @@ class PricesMixin:
             query = query.replace("?", f"?page={page - 1}", 1)
         return self.post_json(  # type: ignore[return-value]
             f"/api/nots/nepse-data/floorsheet{query}",
-            {"id": self._signed("c")})
+            lambda: {"id": self._signed("c")})
 
     def security_floorsheet(self, security_id: int,
                             business_date: Optional[str] = None,
@@ -85,17 +85,17 @@ class PricesMixin:
             query = query.replace("?", f"?page={page - 1}", 1)
         return self.post_json(  # type: ignore[return-value]
             f"/api/nots/security/floorsheet/{security_id}{query}",
-            {"id": self._signed("c")})
+            lambda: {"id": self._signed("c")})
 
     # -- signed POST: index graphs -----------------------------------------------
     def index_intraday(self, index_id: int = 58) -> list:
         """Intraday index chart [[epochSeconds, value]] (homepage graph)."""
         return self.post_json(f"/api/nots/graph/index/{index_id}",  # type: ignore[return-value]
-                              {"id": self._signed("a")})
+                              lambda: {"id": self._signed("a")})
 
     def index_range(self, index_code: int, start: str, end: str) -> list:
         """Index chart over a range (Charts 1W/1M/1Q/1Y; dates 'yyyy-MM-dd')."""
         return self.post_json(  # type: ignore[return-value]
             f"/api/nots/graph/index?indexCode={index_code}"
             f"&startDate={start}&endDate={end}",
-            {"id": self._signed("a")})
+            lambda: {"id": self._signed("a")})
