@@ -620,3 +620,26 @@ def test_binary_downloads_return_bytes(monkeypatch):
     assert ("GET", "/api/nots/security/getImage") in got
     assert ("GET", "/api/nots/security/fetchFiles") in got
     client.close()
+
+
+def test_companies_include_delisted_flag():
+    seen = []
+
+    def handler(request):
+        if request.url.path == "/api/authenticate/prove":
+            return httpx.Response(200, json=fake_prove())
+        seen.append((request.url.path, request.url.query.decode()))
+        return httpx.Response(200, json=[])
+
+    client = make_client(handler)
+    client.companies()
+    client.companies(include_delisted=True)
+    assert seen == [("/api/nots/security", "nonDelisted=true"),
+                    ("/api/nots/security", "nonDelisted=false")]
+    client.close()
+
+
+def test_package_exposes_version():
+    import nepsepy
+
+    assert isinstance(nepsepy.__version__, str) and nepsepy.__version__

@@ -11,9 +11,17 @@ class SecuritiesMixin:
         """All securities [{securityId, securityName, securitySymbol}]."""
         return self.get_json("/api/nots/securities")  # type: ignore[return-value]
 
-    def companies(self) -> list:
-        """Non-delisted companies (selectors site-wide)."""
-        return self.get_json("/api/nots/security?nonDelisted=true")  # type: ignore[return-value]
+    def companies(self, include_delisted: bool = False) -> list:
+        """Companies [{id, symbol, securityName, name, activeStatus}].
+
+        Default: non-delisted only (the site-wide selector list). With
+        ``include_delisted=True`` the delisted, suspended and inactive
+        securities are included too (``activeStatus`` A/D/S/I), which is
+        what survivorship-free historical analysis needs.
+        """
+        flag = "false" if include_delisted else "true"
+        return self.get_json(  # type: ignore[return-value]
+            f"/api/nots/security?nonDelisted={flag}")
 
     def companies_list(self) -> list:
         """Listed companies directory."""
